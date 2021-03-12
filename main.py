@@ -5,6 +5,7 @@ import re
 from person import Person
 import sqlite3
 from sqlite3 import Error
+import logging
 
 """
 **notes**
@@ -17,7 +18,7 @@ from sqlite3 import Error
 TODO: implement resume capability
 https://doc.wikimedia.org/pywikibot/master/_modules/pywikibot/pagegenerators.html - CategorizedPageGenerator
 """
-
+logger = None
 enwiki = pw.Site("en", "wikipedia")
 commons = pw.Site("commons", "commons")
 
@@ -49,15 +50,18 @@ def processPage(pageobj, title=False):
         # get the page title from the page object
         page = pageobj
         pagename = page.title()
+    logger.debug("Processing page " +pagename)
     #print("--------------------------------------------------\n", pagename)
     
     # Processing part
     if not page:
         noexist += 1
+        logger.debug(pagename + " does not exist")
         return None
     hasImg, img = getPageImage(page)
     # pages without images are of no use, skip the page
     if not hasImg:
+        logger.debug(pagename + " does not have a pageimage")
         noimage += 1
         return None
     # determine the location of the page image (either wikipedia:en or commons)
@@ -75,12 +79,17 @@ def processPage(pageobj, title=False):
     date = getImageDate(fpage)
     # not dated images are of no use to us, skip the page
     if not date:
+        logger.debug(pagename + " does not have an imagedate")
         nodate += 1
         return None
     birthDate = getBirthDate(page)
     sex = getSex(page)
     # both sex and birthDate are required
-    if not birthDate or not sex:
+    if not birthDate:
+        logger.debug(pagename + " does not have a birthdate")
+        return None
+    if not sex:
+        logger.debug(pagename + " does not have a sex")
         return None
     p = Person(pagename, pagelink, imgUrl, date, birthDate, sex, page.pageid)
     return p
@@ -226,6 +235,7 @@ def insertIntoDB(conn, persona):
 
     :return: ID of the inserted person, -1 if DB already contains said person
     """
+
     # check if DB already contains the person
     checkquery = """
             SELECT * FROM people WHERE pageid = ?;
@@ -234,6 +244,7 @@ def insertIntoDB(conn, persona):
     cur.execute(checkquery, [persona.pageid])
     rows = cur.fetchall()
     if(len(rows) > 0):
+        logger.warning(persona.title + " already is in DB")
         return -1
     # insert the person
     query = """
@@ -245,13 +256,18 @@ def insertIntoDB(conn, persona):
         conn.commit()
         return cur.lastrowid
     except Error as e:
-        print(e)
-        print(persona)
+        logger.warning(str(e))
+        logger.warning(str(persona))
 
 if __name__ == "__main__":
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    logger.addHandler(handler)
     # category object and a generator to iterate over said category
     cat = pw.Category(enwiki,'Category:Living people')
-    gen = pagegenerators.CategorizedPageGenerator(cat, start="Abbas")
+    gen = pagegenerators.CategorizedPageGenerator(cat)
     # database init
     dbfilename = "first10k.db"
     conn = connToDB(dbfilename)
@@ -287,12 +303,12 @@ if __name__ == "__main__":
             break
         i += 1
 
-    # Output a simple statistic
-    print("noexist",noexist)
-    print("noimage",noimage)
-    print("nodate", nodate)
-    print("nobirthdate", nobirthdate)
-    print("nosex", nosex)
-    print("noclaims",noclaims)
-    print("multiple dates", multipleDates)
-    print("Date and Description Discrepancies", dateDescDiscrepancies)
+    # a simple debug statistic
+    logger.DEBUG("noexist " +str(noexist))
+    logger.DEBUG("noimage "+str(noimage))
+    logger.DEBUG("nodate " +str(nodate))
+    logger.DEBUG("nobirthdate " +str(nobirthdate))
+    logger.DEBUG("nosex " +str(nosex))
+    logger.DEBUG("noclaims " +str(noclaims))
+    logger.DEBUG("multiple dates " +str(multipleDates))
+    logger.DEBUG("Date and Description Discrepancies " +str(dateDescDiscrepancies))
