@@ -31,6 +31,7 @@ dateDescDiscrepancies = 0
 multipleDates = 0
 nosex = 0
 
+
 def processPage(pageobj, title=False):
     """
     Retrieve the required parameters from specified wikipedia page
@@ -59,6 +60,7 @@ def processPage(pageobj, title=False):
         logger.debug(pagename + " does not exist")
         return None
     hasImg, img = getPageImage(page)
+    logger.debug(str(img))
     # pages without images are of no use, skip the page
     if not hasImg:
         logger.debug(pagename + " does not have a pageimage")
@@ -75,6 +77,8 @@ def processPage(pageobj, title=False):
     
     if(pagelink[:2] == "//"):
         pagelink = pagelink[2:]
+    logger.debug(imgUrl)
+    logger.debug(pagelink)
     # get the year in which the page image was taken (to determine the age on the photo)
     date = getImageDate(fpage)
     # not dated images are of no use to us, skip the page
@@ -152,20 +156,27 @@ def getImageDate(filepage):
     global dateDescDiscrepancies, multipleDates
     # parse the structured data provided with the pageimage
     templates = mw.parse(filepage.text).filter_templates()
+    #logger.debug(str(templates))
     # The information segment usually contains the desired date
     infolist = [t for t in templates if "Information" in t]
     if len(infolist) < 1:
         return None
     info = infolist[0]
+    logger.debug(str(info))
+    logger.debug(type(info))
     dateMatches, descMatches = None, None
     # capital letters differ page by page, need to check all possibilities
     dateparam = "Date" if info.has_param("Date") else ("date" if info.has_param("date") else None)
     descparam = "Description" if info.has_param("Description") else ("description" if info.has_param("description") else None)
     dateMatch, descMatch = None, None
+    logger.debug("dateparam "+str(dateparam))
+    logger.debug("descparam "+str(descparam))
     # check for a "date" parameter, which should contain the desired date
     # we check the date with a simple regexp, we accept the match if all matches are equal
     if dateparam:
         dateMatches = re.findall(r"\d{4}", str(info[dateparam]))
+        logger.debug("infodateparam "+str(info[dateparam]))
+        logger.debug("dateMatches "+str(dateMatches))
         if(len(dateMatches) > 1):
             multipleDates+=1
         # some users use the "date" param to supply the upload date, which is not desired
@@ -174,15 +185,23 @@ def getImageDate(filepage):
     # the pageimage description could also contain the desired date
     if descparam:
         descMatches = re.findall(r"\d{4}", str(info[descparam]))
+        logger.debug("infodescparam "+str(info[descparam]))
+        logger.debug("descMatches "+str(descMatches))
         if(len(descMatches) > 1):
             # check if all matches are equal
             if(all(descMatches[0] == x for x in descMatches)):
                 descMatch = descMatches[0]
         elif(len(descMatches) == 1):
             descMatch = descMatches[0]
+    logger.debug("dateMatch "+str(dateMatch))
+    logger.debug("descMatch "+str(descMatch))
     if dateMatch and descMatch and dateMatch != descMatch:
         dateDescDiscrepancies += 1
+    if not dateMatch and descMatch:
+        return descMatch
     return dateMatch
+    
+    
 
     
 
@@ -244,7 +263,7 @@ def insertIntoDB(conn, persona):
     cur.execute(checkquery, [persona.pageid])
     rows = cur.fetchall()
     if(len(rows) > 0):
-        logger.warning(persona.title + " already is in DB")
+        logger.info(persona.title + " already is in DB")
         return -1
     # insert the person
     query = """
@@ -265,11 +284,12 @@ if __name__ == "__main__":
     handler = logging.StreamHandler()
     handler.setLevel(logging.INFO)
     logger.addHandler(handler)
+
     # category object and a generator to iterate over said category
     cat = pw.Category(enwiki,'Category:Living people')
     gen = pagegenerators.CategorizedPageGenerator(cat)
     # database init
-    dbfilename = "first10k.db"
+    dbfilename = "first10k-2.db"
     conn = connToDB(dbfilename)
     sqlTableSchema = """
                 CREATE TABLE IF NOT EXISTS people(
@@ -286,11 +306,11 @@ if __name__ == "__main__":
 
     # Iterate over the category (maximum numPages), insert anything returned to the database
     i = 0
-    numPages = 10000 # 500 took 337s, avg 0.67s per page
+    numPages = 10000 
     printnext = False
     for page in gen:
         if i % 50 == 0:
-            print("{0}/{1}".format(i,numPages))
+            logger.info("{0}/{1}".format(i,numPages))
             printnext = True
         p = processPage(page)
         if p:
