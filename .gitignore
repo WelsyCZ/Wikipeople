@@ -1,0 +1,7 @@
+# exclude everything
+*
+!main.py
+!person.py
+!README.md
+!venvPackagesList.txt
+!.gitignore
