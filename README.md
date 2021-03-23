@@ -1,2 +1,2 @@
 ## Wikipeople
-projekt
+Bakalářská práce
