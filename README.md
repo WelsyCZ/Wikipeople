@@ -1,2 +1,2 @@
 ## Wikipeople
-Bakalářská práce
+Bakalarska prace
