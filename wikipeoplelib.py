@@ -59,9 +59,10 @@ def getDescription(infotemplate):
     """
     if not infotemplate:
         return None
-    if("Description" in infotemplate):
+    paramNames = list(map(lambda x: x.name, infotemplate.params))
+    if("Description" in paramNames):
         desc = infotemplate["Description"]
-    elif("description" in infotemplate):
+    elif("description" in paramNames):
         desc = infotemplate["description"]
     else:
         desc = None
@@ -75,9 +76,10 @@ def getDate(infotemplate):
     """
     if not infotemplate:
         return None
-    if("Date" in infotemplate):
+    paramNames = list(map(lambda x: x.name, infotemplate.params))
+    if("Date" in paramNames):
         date = infotemplate["Date"]
-    elif("date" in infotemplate):
+    elif("date" in paramNames):
         date = infotemplate["date"]
     else:
         date = None

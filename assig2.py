@@ -77,7 +77,8 @@ def livingppl():
     catname = 'Living people'
     cat = pw.Category(enwiki,prefix+catname)
     sampleSize = 1000
-    sortkey = "!ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    #sortkey = "!ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    sortkey = "GHIJKLMNOPQRSTUVWXYZ"
     gen = wlib.uniformPageGenerator(cat, sampleSize, sortkey)
     total = len(sortkey)*sampleSize
     d = timeGen(gen, total,catname)
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     """prefix = 'Category:'
     catname = 'Living people'
     cat = pw.Category(enwiki,prefix+catname)
-    gen = cat.articles(startprefix="D'Aniello")
+    gen = cat.articles(startprefix="Gadkari")
     sortkey = "!ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     print(timeGen(gen,1000,catname))"""
     
